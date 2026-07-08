@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sharely</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.webmanifest">
+
+<meta name="theme-color" content="#151b54">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'app-bg': '#090a0f',
+                        'btn-blue': '#10255c',
+                        'accent-blue': '#3b82f6',
+                        'connect-bg': '#141b2d',
+                        'item-bg': '#11141d',
+                        'code-bg': '#091020',
+                        'card-bg': '#0d121f',
+                        'success-green': '#0e7a3d'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace']
+                    },
+                    keyframes: {
+                        zoomIn: {
+                            '0%': { transform: 'scale(0)' },
+                            '80%': { transform: 'scale(1.1)' },
+                            '100%': { transform: 'scale(1)' }
+                        }
+                    },
+                    animation: {
+                        zoomIn: 'zoomIn 0.5s ease-out forwards'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #090a0f; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #app-container { width: 100vw; height: 100dvh; background-color: #090a0f; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .qr-glow { box-shadow: 0 0 40px rgba(59, 130, 246, 0.25); }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container" class="text-white relative">
+        
+        <div id="toast-container" class="absolute top-8 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none w-[90%] md:w-auto md:min-w-[300px] items-center"></div>
+
+        <div id="screen-home" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 transition-opacity duration-300">
+            <header class="flex justify-between items-center flex-none w-full max-w-5xl mx-auto">
+                <button class="text-2xl text-gray-200 hover:text-white transition-colors"><i class="fa-solid fa-bars"></i></button>
+                <div class="w-11 h-11 md:w-12 md:h-12 rounded-full overflow-hidden border border-transparent bg-gray-800">
+                    <img src="assets/avatar.png" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                </div>
+            </header>
+            
+            <main class="flex-1 flex flex-col md:flex-row justify-center items-center w-full min-h-0 max-w-5xl mx-auto">
+                
+                <div class="flex flex-col items-center w-full md:w-1/2 md:pr-12">
+                    <div class="flex flex-col items-center mb-6 md:mb-8">
+                        <div class="w-[60px] h-[60px] md:w-[72px] md:h-[72px] rounded-full flex items-center justify-center bg-transparent mb-2 md:mb-3">
+                            <img src="assets/sharely-icon.png" class="w-full h-full object-contain" onerror="this.style.display='none'">
+                        </div>
+                        <h1 class="text-[28px] md:text-[36px] font-bold tracking-tight">Sharely</h1>
+                        <p class="text-gray-400 mt-1 text-[14px] md:text-[16px] font-medium tracking-wide">Fast. <span class="text-accent-blue">Secure.</span> Simple.</p>
+                    </div>
+                    <div class="flex justify-center w-full max-h-[130px] md:max-h-[180px] mb-8 md:mb-0">
+                        <img src="assets/folder_illus.png" class="w-auto h-full max-h-[130px] md:max-h-[180px] object-contain" onerror="this.style.display='none'">
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center w-full md:w-1/2 md:border-l md:border-gray-800/80 md:pl-12">
+                    <div class="flex justify-center gap-10 md:gap-12 w-full mb-10 md:mb-12">
+                        <div class="flex flex-col items-center gap-4 cursor-pointer group" id="btn-home-receive">
+                            <button class="w-[115px] h-[115px] md:w-[120px] md:h-[120px] rounded-full bg-btn-blue flex items-center justify-center text-[40px] shadow-lg transition-transform group-hover:scale-105 active:scale-95"><i class="fa-solid fa-download"></i></button>
+                            <span class="text-[17px] md:text-[18px] font-medium text-gray-100 tracking-wide">Receive</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-4 cursor-pointer group" id="btn-home-send">
+                            <button class="w-[115px] h-[115px] md:w-[120px] md:h-[120px] rounded-full bg-btn-blue flex items-center justify-center text-[40px] shadow-lg transition-transform group-hover:scale-105 active:scale-95"><i class="fa-solid fa-upload"></i></button>
+                            <span class="text-[17px] md:text-[18px] font-medium text-gray-100 tracking-wide">Send</span>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full max-w-[320px] md:max-w-[340px]">
+                        <button id="btn-connect-pc" class="w-full bg-connect-bg hover:bg-[#1a233a] transition-colors rounded-2xl py-[14px] md:py-[16px] flex items-center justify-center gap-3 text-[15px] md:text-[16px] font-medium shadow-md active:scale-[0.98]"><i class="fa-solid fa-desktop text-xl text-accent-blue"></i> Connect to PC</button>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <div id="screen-help" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 bg-app-bg transition-opacity duration-300 hidden opacity-0 z-10">
+            <header class="flex justify-between items-center flex-none mb-6 w-full max-w-5xl mx-auto">
+                <button id="btn-back-home-from-help" class="text-2xl text-gray-200 hover:text-white transition-colors cursor-pointer p-2 -ml-2"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-[18px] md:text-[20px] font-semibold tracking-wide">Connect to PC</h2>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-800"><img src="assets/avatar.png" class="w-full h-full object-cover" onerror="this.style.display='none'"></div>
+            </header>
+            
+            <main class="flex-1 flex flex-col md:flex-row w-full overflow-y-auto no-scrollbar max-w-5xl mx-auto pb-10 md:py-10">
+                
+                <div class="flex flex-col items-center mb-8 md:mb-0 w-full md:w-1/2 md:pr-12 md:sticky md:top-10 md:h-fit md:justify-center">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-btn-blue flex items-center justify-center text-[28px] md:text-[32px] mb-4 text-accent-blue"><i class="fa-solid fa-laptop"></i></div>
+                    <h1 class="text-[24px] md:text-[32px] font-bold tracking-tight">Setup Instructions</h1>
+                    <p class="text-gray-400 mt-1 md:mt-3 text-[14px] md:text-[16px] text-center">Follow these steps to transfer files<br>between your mobile and PC.</p>
+                </div>
+
+                <div class="space-y-4 md:space-y-5 w-full md:w-1/2 md:border-l md:border-gray-800/80 md:pl-12 flex flex-col justify-center">
+                    <div class="bg-item-bg rounded-2xl p-5 border border-gray-800/50 flex gap-4 items-start">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-accent-blue flex flex-shrink-0 items-center justify-center font-bold text-white mt-0.5">1</div>
+                        <div class="flex-1">
+                            <h3 class="text-[15px] md:text-[16px] font-bold text-white mb-1">Open Browser on PC</h3>
+                            <p class="text-[13px] md:text-[14px] text-gray-400 leading-relaxed">Visit <span class="text-accent-blue font-medium break-all">https://www.sharely.com</span> on your computer's browser.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-item-bg rounded-2xl p-5 border border-gray-800/50 flex gap-4 items-start">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-accent-blue flex flex-shrink-0 items-center justify-center font-bold text-white mt-0.5">2</div>
+                        <div class="flex-1">
+                            <h3 class="text-[15px] md:text-[16px] font-bold text-white mb-1">Select Action</h3>
+                            <p class="text-[13px] md:text-[14px] text-gray-400 leading-relaxed">On your PC, choose whether you want to <strong class="text-gray-200">Send</strong> or <strong class="text-gray-200">Receive</strong> files.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-item-bg rounded-2xl p-5 border border-gray-800/50 flex gap-4 items-start">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-accent-blue flex flex-shrink-0 items-center justify-center font-bold text-white mt-0.5">3</div>
+                        <div class="flex-1">
+                            <h3 class="text-[15px] md:text-[16px] font-bold text-white mb-1">Connect Devices</h3>
+                            <p class="text-[13px] md:text-[14px] text-gray-400 leading-relaxed">Enter the generated 6-digit code or scan the QR Code displayed.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-900/20 rounded-2xl p-4 border border-blue-800/30 flex gap-3 mt-4 items-start">
+                        <i class="fa-solid fa-lightbulb text-yellow-500 mt-0.5 flex-shrink-0"></i>
+                        <p class="text-[12px] md:text-[13px] text-blue-200/80 leading-relaxed"><strong class="text-blue-400">Pro Tip:</strong> Ensure both devices are on the same Wi-Fi network for maximum transfer speeds.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div id="screen-send" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 bg-app-bg transition-opacity duration-300 hidden opacity-0 z-10">
+             <header class="flex justify-between items-center flex-none mb-6 w-full max-w-5xl mx-auto">
+                <button id="btn-back-home-from-send" class="text-2xl text-gray-200 hover:text-white transition-colors cursor-pointer p-2 -ml-2"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-[18px] md:text-[20px] font-semibold tracking-wide">Send Files</h2>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-800"><img src="assets/avatar.png" class="w-full h-full object-cover" onerror="this.style.display='none'"></div>
+            </header>
+            
+            <div class="w-full max-w-5xl mx-auto flex-1 flex flex-col md:flex-row min-h-0 md:py-6">
+                <div class="flex flex-col items-center md:justify-center mb-8 md:mb-0 flex-none w-full md:w-1/2 md:pr-12 md:border-r md:border-gray-800/80">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-btn-blue flex items-center justify-center text-[28px] md:text-[32px] mb-4"><i class="fa-solid fa-upload"></i></div>
+                    <h1 class="text-[24px] md:text-[32px] font-bold tracking-tight">You're the sender</h1>
+                    <p class="text-gray-400 mt-1 text-[14px] md:text-[16px]">Select files to share securely</p>
+                </div>
+                
+                <div class="w-full md:w-1/2 flex flex-col min-h-0 flex-1 md:pl-12 pt-2 md:pt-0 h-full">
+                    <div class="flex justify-between items-center w-full mb-4 flex-none">
+                        <h3 class="text-[16px] md:text-[18px] font-semibold">Selected Files</h3>
+                        <div class="flex items-center gap-3">
+                            <button id="btn-add-files" class="w-8 h-8 md:w-10 md:h-10 rounded-full border border-blue-600 text-blue-500 flex items-center justify-center hover:bg-blue-900/30 transition-colors"><i class="fa-solid fa-plus"></i></button>
+                            <input type="file" id="file-input" multiple class="hidden">
+                            <div id="size-indicator" class="bg-[#141b2d] px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[13px] md:text-[14px] font-medium text-blue-500">0 / 100 MB</div>
+                        </div>
+                    </div>
+                    
+                    <div id="file-list" class="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-3 pb-4"></div>
+                    
+                    <div class="flex-none pt-2 pb-2 flex flex-col items-center w-full">
+                        <button id="btn-start-sharing" disabled class="w-full bg-[#0d2a85] disabled:bg-gray-800 disabled:text-gray-500 hover:bg-blue-800 transition-colors rounded-[24px] py-[16px] md:py-[18px] flex items-center justify-center text-[18px] md:text-[18px] font-semibold shadow-lg active:scale-[0.98] relative overflow-hidden">
+                            <div class="absolute left-4 w-10 h-10 md:w-11 md:h-11 rounded-full bg-blue-600 disabled:bg-gray-700 flex items-center justify-center text-white"><i class="fa-solid fa-paper-plane"></i></div>
+                            Start Sharing
+                        </button>
+                        <p class="text-[12px] md:text-[13px] text-gray-500 mt-3">Max transfer size: <span class="text-blue-500">100 MB</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-waiting" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 bg-app-bg transition-opacity duration-300 hidden opacity-0 z-20">
+            <header class="flex justify-between items-center flex-none mb-8 w-full max-w-5xl mx-auto">
+                <button id="btn-cancel-share" class="text-2xl text-gray-200 hover:text-white transition-colors cursor-pointer p-2 -ml-2"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-[18px] md:text-[20px] font-semibold tracking-wide">Waiting for Connection</h2>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-800"><img src="assets/avatar.png" class="w-full h-full object-cover" onerror="this.style.display='none'"></div>
+            </header>
+            
+            <main class="flex-1 flex flex-col md:flex-row items-center justify-center w-full mt-2 md:mt-0 max-w-5xl mx-auto">
+                
+                <div class="contents md:flex md:flex-col md:items-center w-full md:w-1/2 md:pr-12">
+                    
+                    <div class="flex flex-col items-center w-full order-1">
+                        <p class="text-[14px] md:text-[16px] text-gray-400 mb-3 md:mb-4">Share this 6-digit code</p>
+                        <div id="display-code" class="w-full max-w-[300px] md:max-w-[340px] border border-blue-900/60 bg-code-bg rounded-[16px] px-6 py-4 md:py-6 md:px-8 flex justify-between items-center mb-8 md:mb-10 shadow-inner">
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center w-full order-3">
+                        <p class="text-[13px] md:text-[15px] text-gray-400 mb-3 md:mb-4">This code will expire in</p>
+                        <div class="bg-code-bg border border-gray-800/80 rounded-full px-6 py-2.5 md:py-3 md:px-8 flex items-center gap-3 shadow-md mb-auto md:mb-0">
+                            <i class="fa-regular fa-clock text-accent-blue text-xl"></i>
+                            <span id="countdown-timer" class="text-accent-blue font-mono text-[22px] md:text-[24px] font-medium tracking-wide">05:00</span>
+                        </div>
+
+                        <div class="flex flex-col items-center mt-8 pb-4 md:hidden">
+                            <div class="flex gap-2 mb-4"><div class="w-2 h-2 rounded-full bg-[#1e3a8a]"></div><div class="w-2 h-2 rounded-full bg-accent-blue animate-pulse"></div><div class="w-2 h-2 rounded-full bg-[#1e3a8a]"></div></div>
+                            <h3 class="text-accent-blue font-medium text-[18px]">Waiting for Connection...</h3>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="contents md:flex md:flex-col md:items-center w-full md:w-1/2 md:border-l md:border-gray-800/80 md:pl-12">
+                    
+                    <div class="flex flex-col items-center w-full order-2">
+                        <p class="text-[14px] md:text-[16px] text-gray-400 mb-4 md:mb-6">Or let them scan this QR code</p>
+                        <div class="bg-white p-4 md:p-6 rounded-[20px] qr-glow mb-10 md:mb-8">
+                            <div id="qrcode" class="w-[200px] h-[200px] md:w-[220px] md:h-[220px] flex items-center justify-center bg-white"></div>
+                        </div>
+
+                        <div class="hidden md:flex flex-col items-center">
+                            <div class="flex gap-2 mb-4"><div class="w-2 h-2 rounded-full bg-[#1e3a8a]"></div><div class="w-2 h-2 rounded-full bg-accent-blue animate-pulse"></div><div class="w-2 h-2 rounded-full bg-[#1e3a8a]"></div></div>
+                            <h3 class="text-accent-blue font-medium text-[18px] mb-1">Waiting for Connection...</h3>
+                            <p class="text-[14px] text-gray-500">Please keep this screen open</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+
+        <div id="screen-receive" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 bg-app-bg transition-opacity duration-300 hidden opacity-0 z-10">
+            <header class="flex justify-between items-center flex-none mb-6 w-full max-w-5xl mx-auto">
+                <button id="btn-back-home-from-receive" class="text-2xl text-gray-200 hover:text-white transition-colors cursor-pointer p-2 -ml-2"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 class="text-[18px] md:text-[20px] font-semibold tracking-wide">Connect to Sender</h2>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-800"><img src="assets/avatar.png" class="w-full h-full object-cover" onerror="this.style.display='none'"></div>
+            </header>
+            
+            <main class="flex-1 flex flex-col md:flex-row items-center justify-center w-full max-w-5xl mx-auto overflow-y-auto no-scrollbar pb-6 md:pb-0">
+                
+                <div class="flex flex-col items-center mb-8 md:mb-0 flex-none w-full md:w-1/2 md:pr-12 md:border-r md:border-gray-800/80">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-btn-blue flex items-center justify-center text-[28px] md:text-[32px] mb-4 text-accent-blue"><i class="fa-solid fa-download"></i></div>
+                    <h1 class="text-[24px] md:text-[32px] font-bold tracking-tight text-center">You're the receiver</h1>
+                    <p class="text-gray-400 mt-1 md:mt-3 text-[14px] md:text-[16px] text-center px-4 leading-relaxed">Enter the 6-digit code or scan the QR code<br>to connect and receive files</p>
+                </div>
+                
+                <div class="flex flex-col items-center w-full md:w-1/2 md:pl-12">
+                    <h3 class="text-[16px] md:text-[18px] font-semibold mb-4 md:mb-6">Enter 6-digit code</h3>
+                    
+                    <div class="flex justify-between gap-2 md:gap-4 w-full max-w-[320px] md:max-w-[420px] mb-6 md:mb-8" id="otp-container">
+                        <input type="text" maxlength="1" class="otp-input w-12 h-14 md:w-14 md:h-16 bg-transparent border border-gray-700 rounded-lg text-center text-2xl md:text-3xl font-bold text-white focus:border-accent-blue focus:ring-1 focus:ring-accent-blue outline-none transition-colors placeholder:text-gray-700 uppercase" placeholder="-">
+                        <input type="text" maxlength="1" class="otp-input w-12 h-14 md:w-14 md:h-16 bg-transparent border border-gray-700 rounded-lg text-center text-2xl md:text-3xl font-bold text-white focus:border-accent-blue focus:ring-1 focus:ring-accent-blue outline-none transition-colors placeholder:text-gray-700 uppercase" placeholder="-">
+                        <input type="text" maxlength="1" class="otp-input w-12 h-14 md:w-14 md:h-16 bg-transparent border border-gray-700 rounded-lg text-center text-2xl md:text-3xl font-bold text-white focus:border-accent-blue focus:ring-1 focus:ring-accent-blue outline-none transition-colors placeholder:text-gray-700 uppercase" placeholder="-">
+                        <input type="text" maxlength="1" class="otp-input w-12 h-14 md:w-14 md:h-16 bg-transparent border border-gray-700 rounded-lg text-center text-2xl md:text-3xl font-bold text-white focus:border-accent-blue focus:ring-1 focus:ring-accent-blue outline-none transition-colors placeholder:text-gray-700 uppercase" placeholder="-">
+                        <input type="text" maxlength="1" class="otp-input w-12 h-14 md:w-14 md:h-16 bg-transparent border border-gray-700 rounded-lg text-center text-2xl md:text-3xl font-bold text-white focus:border-accent-blue focus:ring-1 focus:ring-accent-blue outline-none transition-colors placeholder:text-gray-700 uppercase" placeholder="-">
+                        <input type="text" maxlength="1" class="otp-input w-12 h-14 md:w-14 md:h-16 bg-transparent border border-gray-700 rounded-lg text-center text-2xl md:text-3xl font-bold text-white focus:border-accent-blue focus:ring-1 focus:ring-accent-blue outline-none transition-colors placeholder:text-gray-700 uppercase" placeholder="-">
+                    </div>
+                    
+                    <button id="btn-connect-receiver" disabled class="w-full max-w-[320px] md:max-w-[420px] bg-[#0d2a85] disabled:bg-[#0d152a] disabled:text-gray-600 hover:bg-blue-800 transition-colors rounded-[24px] py-[16px] md:py-[18px] flex items-center justify-center text-[18px] font-semibold shadow-lg active:scale-[0.98] relative overflow-hidden mb-6 md:mb-8">
+                        <div class="absolute left-4 md:left-5 w-10 h-10 md:w-11 md:h-11 rounded-full bg-blue-600 disabled:bg-gray-800 flex items-center justify-center text-white"><i class="fa-solid fa-paper-plane"></i></div>
+                        Connect
+                    </button>
+                    
+                    <div class="flex items-center w-full max-w-[320px] md:max-w-[380px] mb-6 md:mb-8 md:hidden">
+                        <div class="flex-1 h-px bg-gray-800"></div><span class="px-4 text-gray-500 text-[14px]">OR</span><div class="flex-1 h-px bg-gray-800"></div>
+                    </div>
+                    
+                    <div id="btn-scan-qr" class="w-full max-w-[320px] md:max-w-[380px] bg-card-bg rounded-[20px] p-6 flex flex-col items-center border border-gray-800/60 cursor-pointer hover:border-gray-600 transition-colors group md:hidden">
+                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-btn-blue flex items-center justify-center text-[24px] text-white mb-3 group-hover:scale-105 transition-transform"><i class="fa-solid fa-qrcode"></i></div>
+                        <h3 class="text-[16px] md:text-[18px] font-semibold mb-1">Scan QR Code</h3>
+                        <p class="text-[13px] md:text-[14px] text-gray-500 text-center leading-tight">Scan the QR code from the sender<br>to connect instantly</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div id="modal-qr-scanner" class="absolute inset-0 bg-black/95 z-50 hidden flex-col items-center justify-center">
+            <button id="btn-close-scanner" class="absolute top-6 left-6 md:top-10 md:left-10 w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-800 text-white text-xl md:text-2xl flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-white text-[20px] md:text-[24px] font-bold mb-6 md:mb-8">Scan to Connect</h3>
+            <div id="qr-reader" class="w-[300px] md:w-[400px] bg-black border-2 border-accent-blue rounded-xl overflow-hidden shadow-[0_0_20px_rgba(59,130,246,0.3)]"></div>
+            <p class="text-gray-400 mt-6 md:mt-8 text-[14px] md:text-[16px]">Align the sender's QR code within the frame</p>
+        </div>
+
+        <div id="screen-transfer" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 bg-app-bg transition-opacity duration-300 hidden opacity-0 z-30">
+            <header class="flex justify-between items-center flex-none mb-8 w-full max-w-5xl mx-auto">
+                <button id="btn-abort-transfer" class="text-2xl text-gray-200 hover:text-white transition-colors cursor-pointer p-2 -ml-2"><i class="fa-solid fa-arrow-left"></i></button>
+                <h2 id="transfer-title" class="text-[18px] md:text-[20px] font-semibold tracking-wide">Transfer in Progress</h2>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-800"><img src="assets/avatar.png" class="w-full h-full object-cover" onerror="this.style.display='none'"></div>
+            </header>
+
+            <main class="flex-1 flex flex-col md:flex-row items-center justify-center w-full max-w-5xl mx-auto pb-10">
+                
+                <div class="flex flex-col items-center w-full md:w-1/2 md:pr-12 md:border-r md:border-gray-800/80">
+                    <div class="relative w-32 h-32 md:w-40 md:h-40 mb-6 md:mb-8 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full border-[4px] md:border-[5px] border-gray-800"></div>
+                        <div class="absolute inset-0 rounded-full border-[4px] md:border-[5px] border-transparent border-t-accent-blue animate-spin" style="animation-duration: 1.5s;"></div>
+                        <div class="absolute inset-2 md:inset-3 rounded-full border border-gray-800/50"></div>
+                        <img src="assets/folder_illus.png" alt="Transferring" class="w-16 h-16 md:w-20 md:h-20 object-contain relative z-10 animate-pulse" onerror="this.style.display='none'">
+                    </div>
+
+                    <h1 id="transfer-subtitle" class="text-[22px] md:text-[28px] font-bold tracking-tight mb-2 md:mb-3 text-center">Sending files...</h1>
+                    <p class="text-gray-400 text-[14px] md:text-[15px] text-center px-4 mb-10 md:mb-0">Please don't close the app or<br>leave this screen</p>
+                </div>
+
+                <div class="flex flex-col items-center w-full md:w-1/2 md:pl-12">
+                    <div class="w-full bg-[#0b101a] border border-gray-800/60 rounded-[16px] md:rounded-[20px] p-5 md:p-8 shadow-lg">
+                        <div class="flex items-center gap-4 md:gap-5 mb-4 md:mb-6">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded bg-accent-blue flex items-center justify-center text-white text-xl md:text-2xl flex-shrink-0"><i class="fa-solid fa-file-lines"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <h4 id="transfer-filename" class="text-[15px] md:text-[18px] font-medium truncate text-gray-100">Project_Report.pdf</h4>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full bg-[#1a233a] rounded-full h-1.5 md:h-2 mb-2 md:mb-3 relative overflow-hidden">
+                            <div id="transfer-progress-bar" class="bg-accent-blue h-1.5 md:h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        
+                        <div class="flex justify-end mb-4 md:mb-6">
+                            <span id="transfer-percentage" class="text-accent-blue font-semibold text-[15px] md:text-[16px]">0%</span>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[12px] md:text-[14px] text-gray-400 font-medium px-1">
+                            <div class="flex items-center gap-1.5"><i class="fa-regular fa-file"></i> <span id="transfer-size">0 MB</span></div>
+                            <div class="flex items-center gap-1.5"><i class="fa-regular fa-clock"></i> <span>ETA: <span id="transfer-eta">--:--</span></span></div>
+                            <div class="flex items-center gap-1.5"><i class="fa-solid fa-gauge-high"></i> <span id="transfer-speed">0 MB/s</span></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="flex-none py-6 flex justify-center items-center gap-2 md:gap-3 text-gray-500 text-[13px] md:text-[14px] font-medium w-full max-w-5xl mx-auto border-t border-gray-800/50 pt-6">
+                <i class="fa-solid fa-shield-halved text-accent-blue"></i> Secure transfer end-to-end encrypted
+            </footer>
+        </div>
+
+        <div id="screen-complete" class="h-full flex flex-col p-6 md:p-10 w-full absolute top-0 left-0 bg-success-green transition-opacity duration-300 hidden opacity-0 z-40 text-white">
+            <main class="flex-1 flex flex-col md:flex-row items-center justify-center w-full max-w-5xl mx-auto">
+                
+                <div class="flex flex-col items-center w-full md:w-1/2 md:pr-12 md:border-r md:border-white/20">
+                    <div class="w-28 h-28 md:w-36 md:h-36 flex items-center justify-center mb-8 md:mb-10 relative">
+                        <div class="absolute w-36 h-36 md:w-48 md:h-48 rounded-full border-2 border-white/20 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                        <div class="absolute w-full h-full rounded-full border-4 border-white/30"></div>
+                        <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white flex items-center justify-center bg-transparent scale-0 animate-zoomIn">
+                            <i class="fa-solid fa-check text-[40px] md:text-[48px] text-white"></i>
+                        </div>
+                    </div>
+
+                    <h1 class="text-[32px] md:text-[40px] font-bold tracking-tight mb-2 md:mb-3 text-center">Transfer Complete!</h1>
+                    <p id="complete-subtitle" class="text-white/90 text-[16px] md:text-[18px] text-center mb-10 md:mb-0">Your file has been sent successfully.</p>
+                </div>
+
+                <div class="flex flex-col items-center w-full md:w-1/2 md:pl-12">
+                    <div class="w-full max-w-[340px] md:max-w-full bg-black/20 backdrop-blur-md border border-white/10 rounded-[20px] md:rounded-[24px] p-5 md:p-6 flex items-center gap-4 shadow-xl">
+                        <div class="w-12 h-14 md:w-14 md:h-16 rounded bg-white flex items-center justify-center text-success-green text-3xl md:text-4xl flex-shrink-0"><i class="fa-solid fa-file"></i></div>
+                        <div class="flex flex-col flex-1 min-w-0">
+                            <h4 id="complete-filename" class="text-[15px] md:text-[18px] font-semibold text-white mb-1 break-all line-clamp-2 leading-tight">Project_Report.pdf</h4>
+                            <span id="complete-size" class="text-[13px] md:text-[15px] text-white/80">24.50 MB</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 md:mt-10 w-full max-w-[340px] md:max-w-[400px]">
+                        <button id="btn-download-file" class="hidden w-full bg-[#0d2a85] hover:bg-blue-800 text-white transition-colors rounded-[24px] py-[16px] md:py-[18px] flex items-center justify-center text-[18px] font-bold shadow-lg active:scale-[0.98] mb-4">
+                            <i class="fa-solid fa-download mr-2 md:mr-3"></i> Download File
+                        </button>
+                        <button id="btn-back-to-home" class="w-full bg-white text-success-green hover:bg-gray-100 transition-colors rounded-[24px] py-[16px] md:py-[18px] flex items-center justify-center text-[18px] font-bold shadow-lg active:scale-[0.98]">
+                            Back to Home
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+    <script>
+        if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(() => console.log("Service Worker registered"))
+      .catch(console.error);
+  });
+}
+    </script>
+</body>
+</html>
