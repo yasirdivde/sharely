@@ -28,6 +28,11 @@ export function removeFile(index) {
 export function getFiles() { return selectedFiles; }
 export function getTotalSize() { return selectedFiles.reduce((acc, file) => acc + file.size, 0); }
 
+// NEW: Clear file array on reset
+export function clearAllFiles() {
+    selectedFiles = [];
+}
+
 export function formatBytes(bytes) {
     if (bytes === 0) return '0 MB';
     const mb = bytes / (1024 * 1024);
