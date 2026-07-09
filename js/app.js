@@ -1,10 +1,9 @@
-import { addFiles, removeFile, getTransferableData } from './fileManager.js';
-import { showScreen, renderFileList, renderWaitingScreen, startTimer, stopTimer, setupOTPInputs, setupTransferScreen, updateTransferProgress, renderCompleteScreen, toggleQRScanner, showToast } from './ui.js';
+import { addFiles, removeFile, getTransferableData, clearAllFiles } from './fileManager.js';
+import { showScreen, renderFileList, renderWaitingScreen, startTimer, stopTimer, setupOTPInputs, setupTransferScreen, updateTransferProgress, renderCompleteScreen, toggleQRScanner, showToast, resetSenderUI, resetReceiverUI } from './ui.js';
 import { initSender, initReceiver, terminateConnection, cancelTransfer, startSendingFile } from './webrtc.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Buttons
     const btnHomeSend = document.getElementById('btn-home-send');
     const btnHomeReceive = document.getElementById('btn-home-receive');
     const btnConnectPc = document.getElementById('btn-connect-pc');
@@ -27,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const btnDownloadFile = document.getElementById('btn-download-file');
 
-    // State Variables
     let preparedFile = null; 
     let currentInputCode = null;
     let transferStartTime = 0;
@@ -37,14 +35,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingDownloadBlobUrl = null;
     let pendingDownloadFilename = null;
 
-    // ----- CRITICAL MEMORY CLEANUP -----
+    // ----- CRITICAL MEMORY & UI CLEANUP -----
     function cleanupMemory() {
         if (pendingDownloadBlobUrl) {
             URL.revokeObjectURL(pendingDownloadBlobUrl); // Free RAM
             pendingDownloadBlobUrl = null;
         }
-        receiveBuffer = []; // Clear array from memory
+        receiveBuffer = []; 
         preparedFile = null;
+        currentInputCode = null;
+
+        // Reset UI DOM Elements
+        clearAllFiles();
+        resetSenderUI();
+        resetReceiverUI();
     }
 
     // ----- NAVIGATION -----
@@ -64,7 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnBackHomeFromHelp.addEventListener('click', goHome);
     btnBackToHome.addEventListener('click', goHome);
     
-    btnCancelShare.addEventListener('click', () => { stopTimer(); terminateConnection(); showScreen('screen-send'); });
+    btnCancelShare.addEventListener('click', () => { 
+        stopTimer(); 
+        terminateConnection(); 
+        cleanupMemory(); // Clear the code if they back out of waiting
+        showScreen('screen-send'); 
+    });
     
     btnAbortTransfer.addEventListener('click', () => {
         if(confirm("Are you sure you want to cancel the transfer?")) { 
@@ -135,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let expectedSize = 0;
     let expectedName = "";
+    let receivedBytes = 0;
 
     function executeConnection(codeToConnect) {
         const originalText = btnConnectReceiver.innerHTML;
@@ -147,29 +157,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 
             (error) => { 
                 btnConnectReceiver.innerHTML = originalText; btnConnectReceiver.removeAttribute('disabled');
-                showToast('Connection Failed. Check code.');
+                showToast('Connection Failed after multiple attempts. Check code.');
             },
             (data, activeConn) => { 
                 if (data.type === 'META') {
                     isTransferring = true;
-                    expectedName = data.name; expectedSize = data.size;
-                    receiveBuffer = []; // Reset on new meta
+                    expectedName = data.name; 
+                    expectedSize = data.size;
+                    receiveBuffer = []; 
+                    receivedBytes = 0;
                     transferStartTime = Date.now();
                     setupTransferScreen('receiver', expectedName, expectedSize);
                     showScreen('screen-transfer');
+                    
                     activeConn.send({ type: 'META_ACK' });
                 } 
                 else if (data.type === 'CHUNK') {
                     receiveBuffer.push(data.payload);
-                    const loaded = receiveBuffer.reduce((acc, val) => acc + val.byteLength, 0);
-                    updateTransferProgress(loaded, expectedSize, transferStartTime);
-                    activeConn.send({ type: 'CHUNK_ACK' });
+                    receivedBytes += data.payload.byteLength;
+                    updateTransferProgress(receivedBytes, expectedSize, transferStartTime);
                 } 
                 else if (data.type === 'DONE') {
                     isTransferring = false;
                     
+                    if (receivedBytes !== expectedSize) {
+                        showToast("Transfer corrupted: Data mismatch.");
+                        goHome();
+                        return;
+                    }
+                    
                     const blob = new Blob(receiveBuffer);
-                    pendingDownloadBlobUrl = URL.createObjectURL(blob); // Hold URL for download button
+                    pendingDownloadBlobUrl = URL.createObjectURL(blob); 
                     pendingDownloadFilename = expectedName;
                     
                     renderCompleteScreen('receiver', expectedName, expectedSize, true);
