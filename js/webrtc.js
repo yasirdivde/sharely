@@ -2,7 +2,6 @@ let peer = null;
 let currentCode = null;
 let connection = null;
 
-// Configured with multiple robust STUN servers for maximum connection reliability
 const peerConfig = {
     config: { 
         'iceServers': [
@@ -35,51 +34,103 @@ export function initSender(onConnectionEstablished, onReceiverData, onDisconnect
 }
 
 export function initReceiver(codeToConnect, onConnectionEstablished, onConnectionFailed, onSenderData, onDisconnect) {
-    peer = new Peer(peerConfig);
-    peer.on('open', (id) => {
-        connection = peer.connect(codeToConnect.toUpperCase());
-        connection.on('open', () => onConnectionEstablished(connection));
-        connection.on('data', (data) => onSenderData(data, connection));
-        connection.on('close', onDisconnect);
-        connection.on('error', onConnectionFailed);
-    });
-    peer.on('error', onConnectionFailed);
+    let retries = 0;
+    const MAX_RETRIES = 3;
+
+    function attemptConnection() {
+        peer = new Peer(peerConfig);
+
+        peer.on('open', (id) => {
+            // Explicitly request a reliable channel for ordered chunk delivery
+            connection = peer.connect(codeToConnect.toUpperCase(), { reliable: true });
+
+            connection.on('open', () => {
+                onConnectionEstablished(connection);
+            });
+
+            connection.on('data', (data) => onSenderData(data, connection));
+            connection.on('close', onDisconnect);
+
+            connection.on('error', (err) => {
+                handleFailure(err);
+            });
+        });
+
+        peer.on('error', (err) => {
+            handleFailure(err);
+        });
+    }
+
+    function handleFailure(err) {
+        console.warn(`Connection attempt failed: ${err.type || err}`);
+        if (connection) connection.close();
+        if (peer) peer.destroy();
+        
+        retries++;
+        if (retries <= MAX_RETRIES) {
+            console.log(`Retrying connection... Attempt ${retries} of ${MAX_RETRIES}`);
+            setTimeout(() => attemptConnection(), 1500); // 1.5s delay before retry
+        } else {
+            onConnectionFailed(err);
+        }
+    }
+
+    attemptConnection();
 }
 
-// Reduced Chunk Size to 64KB. This prevents the WebRTC 'RTCDataChannel send queue is full' error on stricter networks
-const CHUNK_SIZE = 64 * 1024; 
+// ----- HIGH-SPEED BUFFERED TRANSFER LOGIC -----
+const CHUNK_SIZE = 64 * 1024; // 64KB
+const MAX_BUFFER_SIZE = 2 * 1024 * 1024; // Pause sending if buffer hits 2MB
 
-export function startSendingFile(file, onProgressCallback, onCompleteCallback) {
-    if (!connection) return;
+export async function startSendingFile(file, onProgressCallback, onCompleteCallback) {
+    if (!connection || !connection.dataChannel) return;
     
     let offset = 0;
+    
+    // Set the low watermark to 1MB. When buffer drains below this, resume sending.
+    connection.dataChannel.bufferedAmountLowThreshold = MAX_BUFFER_SIZE / 2;
+
     connection.send({ type: 'META', name: file.name, size: file.size });
 
     const dataListener = (data) => {
-        if (data.type === 'META_ACK' || data.type === 'CHUNK_ACK') {
-            if (offset < file.size) {
-                readNextChunk();
-            } else {
-                connection.send({ type: 'DONE' });
-                connection.off('data', dataListener);
-                onCompleteCallback();
-            }
+        if (data.type === 'META_ACK') {
+            // We no longer need to listen for ACKs, deregister the listener
+            connection.off('data', dataListener);
+            
+            // Register the native buffer drain event and start pumping data
+            connection.dataChannel.onbufferedamountlow = pumpData;
+            pumpData();
         }
     };
     connection.on('data', dataListener);
 
-    function readNextChunk() {
-        if(!connection) return; 
-        const slice = file.slice(offset, offset + CHUNK_SIZE);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if(connection) {
-                connection.send({ type: 'CHUNK', payload: e.target.result });
-                offset += e.target.result.byteLength;
-                onProgressCallback(offset, file.size);
+    async function pumpData() {
+        if (!connection || !connection.dataChannel) return;
+
+        while (offset < file.size) {
+            // If the underlying WebRTC buffer is too full, exit the loop.
+            // The browser will automatically call `onbufferedamountlow` when it drains.
+            if (connection.dataChannel.bufferedAmount > MAX_BUFFER_SIZE) {
+                return;
             }
-        };
-        reader.readAsArrayBuffer(slice);
+
+            const chunk = file.slice(offset, offset + CHUNK_SIZE);
+            const buffer = await chunk.arrayBuffer(); // Modern async read
+            
+            if (!connection || !connection.dataChannel) return; // Abort if cancelled during await
+
+            connection.send({ type: 'CHUNK', payload: buffer });
+            offset += buffer.byteLength;
+            
+            onProgressCallback(offset, file.size);
+        }
+
+        // When all chunks are queued, send completion flag and clean up
+        if (offset >= file.size) {
+            connection.send({ type: 'DONE' });
+            connection.dataChannel.onbufferedamountlow = null; 
+            onCompleteCallback();
+        }
     }
 }
 
@@ -93,8 +144,13 @@ export function cancelTransfer() {
 }
 
 export function terminateConnection() {
-    if (connection) connection.close();
-    if (peer) { peer.destroy(); peer = null; }
+    if (connection) {
+        connection.close();
+    }
+    if (peer) { 
+        peer.destroy(); 
+        peer = null; 
+    }
     currentCode = null;
     connection = null;
 }
