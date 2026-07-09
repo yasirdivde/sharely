@@ -33,23 +33,62 @@ export function playSuccessSound() {
     } catch(e) { console.log('Audio error:', e); }
 }
 
+// FIX: Added timeout tracking to prevent race conditions on instant transfers
+let screenTimeouts = {};
+
 export function showScreen(screenId) {
     const screens = ['screen-home', 'screen-send', 'screen-waiting', 'screen-receive', 'screen-transfer', 'screen-complete', 'screen-help']; 
     screens.forEach(id => {
         const el = document.getElementById(id);
+        
+        // Clear any ongoing fade animations so they don't hide newly shown screens
+        if (screenTimeouts[id]) {
+            clearTimeout(screenTimeouts[id].op);
+            clearTimeout(screenTimeouts[id].hid);
+        }
+        screenTimeouts[id] = {};
+
         if (id === screenId) {
             el.classList.remove('hidden');
-            setTimeout(() => el.classList.remove('opacity-0'), 50); 
+            screenTimeouts[id].op = setTimeout(() => el.classList.remove('opacity-0'), 50); 
             if(id === 'screen-transfer') el.classList.add('z-30');
             else if(id === 'screen-complete') el.classList.add('z-40');
             else if(id === 'screen-waiting') el.classList.add('z-20');
             else el.classList.add('z-10');
         } else {
             el.classList.add('opacity-0');
-            setTimeout(() => el.classList.add('hidden'), 300); 
+            screenTimeouts[id].hid = setTimeout(() => el.classList.add('hidden'), 300); 
             el.classList.remove('z-10', 'z-20', 'z-30', 'z-40');
         }
     });
+}
+
+// NEW: Reset UI Functions
+export function resetSenderUI() {
+    const listContainer = document.getElementById('file-list');
+    const sizeIndicator = document.getElementById('size-indicator');
+    const startButton = document.getElementById('btn-start-sharing');
+    const fileInput = document.getElementById('file-input');
+    
+    if (listContainer) listContainer.innerHTML = '';
+    if (sizeIndicator) sizeIndicator.innerHTML = `0 / ${MAX_SIZE_BYTES / (1024 * 1024)} MB`;
+    if (startButton) startButton.setAttribute('disabled', 'true');
+    if (fileInput) fileInput.value = '';
+}
+
+export function resetReceiverUI() {
+    const inputs = document.querySelectorAll('.otp-input');
+    const btnConnect = document.getElementById('btn-connect-receiver');
+    
+    inputs.forEach(input => input.value = '');
+    if (btnConnect) {
+        btnConnect.setAttribute('disabled', 'true');
+        const iconContainer = btnConnect.querySelector('div');
+        if (iconContainer) {
+            iconContainer.classList.remove('bg-blue-600');
+            iconContainer.classList.add('bg-gray-800');
+        }
+    }
 }
 
 export function renderFileList(files, onRemoveCallback) {
