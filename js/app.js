@@ -35,23 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingDownloadBlobUrl = null;
     let pendingDownloadFilename = null;
 
-    // ----- CRITICAL MEMORY & UI CLEANUP -----
+    // UI Throttling to prevent layout thrashing
+    let lastUITime = 0;
+    const UI_THROTTLE_MS = 150; 
+
     function cleanupMemory() {
         if (pendingDownloadBlobUrl) {
-            URL.revokeObjectURL(pendingDownloadBlobUrl); // Free RAM
+            URL.revokeObjectURL(pendingDownloadBlobUrl); 
             pendingDownloadBlobUrl = null;
         }
         receiveBuffer = []; 
         preparedFile = null;
         currentInputCode = null;
 
-        // Reset UI DOM Elements
         clearAllFiles();
         resetSenderUI();
         resetReceiverUI();
     }
 
-    // ----- NAVIGATION -----
     btnHomeSend.addEventListener('click', () => showScreen('screen-send'));
     btnHomeReceive.addEventListener('click', () => showScreen('screen-receive'));
     btnConnectPc.addEventListener('click', () => showScreen('screen-help'));
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCancelShare.addEventListener('click', () => { 
         stopTimer(); 
         terminateConnection(); 
-        cleanupMemory(); // Clear the code if they back out of waiting
+        cleanupMemory(); 
         showScreen('screen-send'); 
     });
     
@@ -104,9 +105,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     setupTransferScreen('sender', preparedFile.name, preparedFile.size);
                     showScreen('screen-transfer');
                     transferStartTime = Date.now();
+                    lastUITime = transferStartTime;
                     
                     startSendingFile(preparedFile, 
-                        (loaded, total) => updateTransferProgress(loaded, total, transferStartTime),
+                        (loaded, total) => {
+                            const now = Date.now();
+                            // Throttle updates unless it's the final chunk
+                            if (now - lastUITime > UI_THROTTLE_MS || loaded === total) {
+                                updateTransferProgress(loaded, total, transferStartTime);
+                                lastUITime = now;
+                            }
+                        },
                         () => { 
                             isTransferring = false;
                             renderCompleteScreen('sender', preparedFile.name, preparedFile.size, false);
@@ -160,6 +169,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Connection Failed after multiple attempts. Check code.');
             },
             (data, activeConn) => { 
+                
+                // FASTER: Intercept raw binary chunks immediately
+                if (data instanceof ArrayBuffer || ArrayBuffer.isView(data) || (data.byteLength !== undefined && !data.type)) {
+                    
+                    receiveBuffer.push(data);
+                    receivedBytes += data.byteLength;
+                    
+                    const now = Date.now();
+                    // Throttle UI updates
+                    if (now - lastUITime > UI_THROTTLE_MS || receivedBytes === expectedSize) {
+                        updateTransferProgress(receivedBytes, expectedSize, transferStartTime);
+                        lastUITime = now;
+                    }
+                    return; 
+                }
+
+                // Control Messages Fallback
                 if (data.type === 'META') {
                     isTransferring = true;
                     expectedName = data.name; 
@@ -167,15 +193,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     receiveBuffer = []; 
                     receivedBytes = 0;
                     transferStartTime = Date.now();
+                    lastUITime = transferStartTime;
                     setupTransferScreen('receiver', expectedName, expectedSize);
                     showScreen('screen-transfer');
                     
                     activeConn.send({ type: 'META_ACK' });
-                } 
-                else if (data.type === 'CHUNK') {
-                    receiveBuffer.push(data.payload);
-                    receivedBytes += data.payload.byteLength;
-                    updateTransferProgress(receivedBytes, expectedSize, transferStartTime);
                 } 
                 else if (data.type === 'DONE') {
                     isTransferring = false;
@@ -186,8 +208,32 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     
-                    const blob = new Blob(receiveBuffer);
-                    pendingDownloadBlobUrl = URL.createObjectURL(blob); 
+                    // Let the browser natively handle array chunk stitching
+                    const blob = new Blob(receiveBuffer, { type: 'application/octet-stream' });
+                    console.log(blob);
+
+console.log("Blob size:", blob.size);
+
+blob.arrayBuffer().then(buffer => {
+    console.log("Blob arrayBuffer length:", buffer.byteLength);
+});
+                    
+
+                    pendingDownloadBlobUrl = URL.createObjectURL(blob);
+
+console.log("Blob URL:", pendingDownloadBlobUrl);
+
+fetch(pendingDownloadBlobUrl)
+  .then(r => {
+    console.log("Fetch status:", r.status);
+    return r.arrayBuffer();
+  })
+  .then(buf => {
+    console.log("Fetched blob bytes:", buf.byteLength);
+  })
+  .catch(err => {
+    console.error("Blob URL fetch failed:", err);
+  }); 
                     pendingDownloadFilename = expectedName;
                     
                     renderCompleteScreen('receiver', expectedName, expectedSize, true);
@@ -215,11 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnDownloadFile.addEventListener('click', () => {
         if(!pendingDownloadBlobUrl) return;
         const a = document.createElement('a');
-        a.href = pendingDownloadBlobUrl;
-        a.download = pendingDownloadFilename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+a.href = pendingDownloadBlobUrl;
+a.download = pendingDownloadFilename;
+document.body.appendChild(a);
+
+setTimeout(() => {
+    a.click();
+    document.body.removeChild(a);
+}, 100);
     });
 
     // ----- QR SCANNER LOGIC -----
