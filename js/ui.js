@@ -33,7 +33,6 @@ export function playSuccessSound() {
     } catch(e) { console.log('Audio error:', e); }
 }
 
-// FIX: Added timeout tracking to prevent race conditions on instant transfers
 let screenTimeouts = {};
 
 export function showScreen(screenId) {
@@ -41,7 +40,6 @@ export function showScreen(screenId) {
     screens.forEach(id => {
         const el = document.getElementById(id);
         
-        // Clear any ongoing fade animations so they don't hide newly shown screens
         if (screenTimeouts[id]) {
             clearTimeout(screenTimeouts[id].op);
             clearTimeout(screenTimeouts[id].hid);
@@ -63,7 +61,6 @@ export function showScreen(screenId) {
     });
 }
 
-// NEW: Reset UI Functions
 export function resetSenderUI() {
     const listContainer = document.getElementById('file-list');
     const sizeIndicator = document.getElementById('size-indicator');
@@ -173,26 +170,58 @@ export function setupOTPInputs(onCodeComplete) {
     }
 }
 
+// ----- SPEED CALCULATION TRACKERS -----
+let lastLoadedBytes = 0;
+let lastSpeedTime = 0;
+let smoothedSpeedBps = 0; // EMA Tracker
+
 export function setupTransferScreen(role, filename, totalSize) {
     document.getElementById('transfer-title').innerText = role === 'sender' ? 'Transfer in Progress' : 'Receiving...';
     document.getElementById('transfer-subtitle').innerText = role === 'sender' ? 'Sending files...' : 'Receiving files...';
     document.getElementById('transfer-filename').innerText = filename;
     document.getElementById('transfer-size').innerText = formatBytes(totalSize);
+    
+    // Reset trackers for new transfer
+    lastLoadedBytes = 0;
+    lastSpeedTime = Date.now();
+    smoothedSpeedBps = 0;
+
     updateTransferProgress(0, totalSize, 0); 
 }
 
 export function updateTransferProgress(loaded, total, startTime) {
+    // 1. Instantly update the progress bar and percentage
     const percentage = total === 0 ? 0 : Math.min(100, Math.round((loaded / total) * 100));
     document.getElementById('transfer-progress-bar').style.width = `${percentage}%`;
     document.getElementById('transfer-percentage').innerText = `${percentage}%`;
 
-    const elapsedSeconds = (Date.now() - startTime) / 1000;
-    if (elapsedSeconds > 0 && loaded > 0) {
-        const speedBps = loaded / elapsedSeconds;
-        document.getElementById('transfer-speed').innerText = `${(speedBps / (1024 * 1024)).toFixed(2)} MB/s`;
+    const now = Date.now();
+    const timeDiff = now - lastSpeedTime;
+
+    // 2. Throttle speed calculation to every 500ms (or if finished to show final state)
+    if (timeDiff >= 500 || (loaded === total && timeDiff > 0)) {
+        
+        // Calculate raw bytes per second for this specific 500ms window
+        const bytesSinceLast = Math.max(0, loaded - lastLoadedBytes);
+        const currentSpeedBps = (bytesSinceLast / timeDiff) * 1000; 
+
+        // 3. Apply Exponential Moving Average (EMA)
+        const alpha = 0.35;
+        smoothedSpeedBps = smoothedSpeedBps === 0 
+            ? currentSpeedBps 
+            : smoothedSpeedBps * (1 - alpha) + currentSpeedBps * alpha;
+
+        // Update Speed UI
+        document.getElementById('transfer-speed').innerText = `${(smoothedSpeedBps / (1024 * 1024)).toFixed(2)} MB/s`;
+
+        // Update ETA UI based on the EMA speed
         const remainingBytes = total - loaded;
-        const etaSeconds = Math.round(remainingBytes / speedBps);
+        const etaSeconds = smoothedSpeedBps > 0 ? Math.round(remainingBytes / smoothedSpeedBps) : 0;
         document.getElementById('transfer-eta').innerText = formatETA(etaSeconds);
+
+        // Update trackers for the next tick
+        lastLoadedBytes = loaded;
+        lastSpeedTime = now;
     }
 }
 
